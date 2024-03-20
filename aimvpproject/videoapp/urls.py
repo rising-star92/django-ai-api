@@ -1,7 +1,7 @@
-from rest_framework import routers
-from .views import VideoItemViewSet
+from django.urls import path
+from . import views
 
-router = routers.DefaultRouter()
-router.register(r'videos', VideoItemViewSet)
-
-urlpatterns = router.urls
+urlpatterns = [
+  path('videos/', views.video_list),
+  path('videos/process', views.video_process),
+]

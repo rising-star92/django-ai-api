@@ -42,7 +42,7 @@ def video_process(request):
     path = request.data['url']
     current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_path = current_directory + r"/data/demo.mp4"
-    # process(default_path, save_vid = True)
+    process(default_path, save_vid = True)
     serializer.save()
     return Response(
       {

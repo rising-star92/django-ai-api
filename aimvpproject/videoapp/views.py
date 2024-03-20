@@ -45,6 +45,12 @@ def video_process(request):
     default_path = current_directory + r"/data/demo.mp4"
     print(default_path)
     process(default_path, save_vid = True)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    serializer.save()
+    return Response(
+      {
+        "message": "Video processing is success!",
+        "url": "path",
+      },
+      status=status.HTTP_200_OK)
   return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

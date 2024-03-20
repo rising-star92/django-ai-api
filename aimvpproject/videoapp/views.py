@@ -39,12 +39,10 @@ def video_list(request):
 def video_process(request):
   serializer = VideoItemSerializer(data=request.data)
   if serializer.is_valid():
-    print(request.data['url'])    
     path = request.data['url']
     current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     default_path = current_directory + r"/data/demo.mp4"
-    print(default_path)
-    process(default_path, save_vid = True)
+    # process(default_path, save_vid = True)
     serializer.save()
     return Response(
       {

@@ -6,6 +6,7 @@ from .serializers import VideoItemSerializer
 from .aiutility.shotdetector import ShotDetector
 import os
 from tqdm import tqdm
+from django.core.files.storage import FileSystemStorage
 
 # Create your views here.
 
@@ -47,8 +48,17 @@ def video_process(request):
     return Response(
       {
         "message": "Video processing is success!",
-        "url": "path",
+        "url": path
       },
       status=status.HTTP_200_OK)
   return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+def video_upload(request):
+  if request.FILES['FILES']:
+    myfile = request.FILES['FILES']
+    fs = FileSystemStorage()
+    filename = fs.save(myfile.name, myfile)
+    uploaded_file_url = fs.url(filename)
+    return Response({"message": "Video uploading is success!", "url": uploaded_file_url})
+  

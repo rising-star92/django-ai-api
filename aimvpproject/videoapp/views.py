@@ -12,8 +12,10 @@ import time
 
 # Create your views here.
 
-def process(path, serializer, disp = False, save_vid = False, debug = False):
+def process(path, video_id, disp = False, save_vid = False, debug = False):
   shot_det = ShotDetector()
+  ret = False
+
   if os.path.isdir(path):
     print(f"[INFO]: Processing videos in {path}(same directory as executable)")
     video_files = []
@@ -25,33 +27,60 @@ def process(path, serializer, disp = False, save_vid = False, debug = False):
       print(f"Processing {os.path.basename(vid_path)}")
       shot_det.process_vid(vid_path, disp, save_vid=True)
       shot_det.reset()
-      # serialize = VideoItemSerializer(data = serializer)
-      if serializer.is_valid():
-        validated_data = serializer.validated_data
-        validated_data['status'] = "processed"
-        serializer.save()
-      time.sleep(2)
+    ret = True
   elif os.path.isfile(path):
     vid_path = path
-    # shot_det.process_vid(vid_path, disp, save_vid, debug)
-    if serializer.is_valid():
-      print("aaaaaaaaaaaaa", serializer.validated_data.get('status'))
-      validated_data = serializer.validated_data
-      validated_data['status'] = "processed"
-      serializer.save()
-    time.sleep(2)
+    shot_det.process_vid(vid_path, disp, save_vid, debug)
+    ret = True
   else:
     print("[ERROR] Given path is neither Video Nor Directory!")
-    time.sleep(2)
+    ret = False
+
+  if ret:
+    video = VideoItem.objects.get(pk = video_id)    
+    serializer = VideoItemSerializer(instance = video)
+    data = serializer.data
+    data['status'] = VideoItem.VideoStatus.PROCESSED
+    serializer.update(video, data)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def video_list(request):
-  videos = VideoItem.objects.filter(id=request.query_params['id'])
-  serializer = VideoItemSerializer(videos, many=True)
-  return Response(serializer.data)
-  # return Response({"message":f"The video {request.query_params['id']} is {serializer.data['status']}."}, status=status.HTTP_200_OK)
+  if request.method == 'GET':
+    videos = VideoItem.objects.all()
+    serializer = VideoItemSerializer(videos, many=True)
+    return Response(serializer.data)
+  
+  elif request.method == 'POST':
+    serializer = VideoItemSerializer(data=request.data)
+    if serializer.is_valid():
+      serializer.save()
+      return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET', 'PUT', 'DELETE'])
+def video_details(request, pk):
+  try:
+    video = VideoItem.objects.get(pk=pk)
+  except VideoItem.DoesNotExist:
+    return Response(status=status.HTTP_404_NOT_FOUND)
+  
+  if request.method == 'GET':
+    serializer = VideoItemSerializer(video)
+    return Response(serializer.data)
+  
+  elif request.method == 'PUT':
+    serializer = VideoItemSerializer(instance=video, data=request.data)
+    if serializer.is_valid():
+      serializer.save()
+      return Response(serializer.data)
+    else:
+      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+  elif request.method == 'DELETE':
+    video.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+  
 @api_view(['POST'])
 def video_process(request):
   serializer = VideoItemSerializer(data=request.data)
@@ -61,15 +90,12 @@ def video_process(request):
     default_path = current_directory + r"/data/demo.mp4"
     vid_path = current_directory + path
     validated_data = serializer.validated_data
-    validated_data['status'] = "processing" 
+    validated_data['status'] = VideoItem.VideoStatus.PROCESSING
     serializer.save()
-    t = Thread(target=process, args=(vid_path, serializer), kwargs={'save_vid': True})
+    video_id = serializer.data['id']
+    t = Thread(target=process, args=(vid_path, video_id), kwargs={'save_vid': True})
     t.start()
-    return Response(
-      {
-        "video_id": serializer.data['id']
-      },
-      status=status.HTTP_200_OK)
+    return Response(serializer.data)
   return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])

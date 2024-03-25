@@ -9,3 +9,5 @@ urlpatterns = [
   path('videos/process', views.video_process),
   path('videos/upload', views.video_upload),
 ]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

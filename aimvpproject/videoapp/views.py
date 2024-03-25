@@ -71,7 +71,7 @@ def download_file_to_server(vid_id):
 @api_view(['GET'])
 def download_video_to_local(request, name):
   print("downdowndown", name)
-  url = 'http://198.22.162.34/home/don/Work/django-ai-api/aimvpproject/data/'
+  url = 'http://198.22.162.34/home/oliver/Work/django-ai-api/aimvpproject/data/'
   root, ext = os.path.splitext(name)
   output_name = root + "_processed.mp4"
   with requests.get(url, stream=True) as r:

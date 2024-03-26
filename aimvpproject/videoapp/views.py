@@ -46,10 +46,7 @@ def process(vid_name, video_id, disp = False, save_vid = False, debug = False):
     video = VideoItem.objects.get(pk = video_id)    
     serializer = VideoItemSerializer(instance = video)
     data = serializer.data
-    root, ext = os.path.splitext(data.title)
-    output_path = root + '_processed.mp4'
     data['status'] = VideoItem.VideoStatus.PROCESSED
-    data['path'] = output_path
     serializer.update(video, data)
 
 def download_file_to_server(vid_id):
@@ -66,7 +63,7 @@ def download_file_to_server(vid_id):
         with open(file_path, 'wb') as file:
             for chunk in response.iter_content(chunk_size=1048576):
                 file.write(chunk)
-                
+        print("file_down_path", file_path)        
         return file_path
     else:
         response.raise_for_status()
@@ -75,11 +72,11 @@ def download_file_to_server(vid_id):
 def download_video_to_local(request, name):
   print("downdowndown", name)
   url = f'https://198.22.162.34:9001/home/oliver/project/django-ai-api/aimvpproject/data/{name}'
-  current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-  path = current_directory + f"/{name}"
-  print("ccccccccccccccc", path)
-  # root, ext = os.path.splitext(name)
-  # output_name = root + "_processed.mp4"
+
+  # url1 = f"https://api.1upstats.com/public/uploads/{name}"
+  print("mmmmmmmmmm", settings.MEDIA_ROOT)
+  # /home/oliver/project/django-ai-api/aimvpproject/demo_processed.mp4
+  
   with requests.get(url, stream=True) as r:
         r.raise_for_status()  # Raises an HTTPError if the response status code is 4XX/5XX
         with open(name, 'wb') as f:

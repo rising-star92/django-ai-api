@@ -8,5 +8,8 @@ urlpatterns = [
   path('videos/<int:pk>/', views.video_details),
   path('videos/process', views.video_process),
   path('videos/upload', views.video_upload),
-  path('videos/download/<str:name>', views.download_video_to_local)
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+  path('videos/download/<int:pk>', views.download_video_to_local)
+]
+if settings.DEBUG:
+    # urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)

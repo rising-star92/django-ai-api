@@ -73,7 +73,7 @@ class ShotDetector:
     self.img_width, self.img_height = new_width, new_height
     print("vivivivi", vid_path)
     
-    self.run(disp, save_vid)
+    return self.run(disp, save_vid)
       
   def run(self, disp=False, save_vid=False):
     #goals = 0
@@ -154,6 +154,7 @@ class ShotDetector:
         out.release()
     self.cap.release()
     cv2.destroyAllWindows()
+    return output_path
 
   def clean_motion(self):
     # Clean and display ball motion

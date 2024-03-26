@@ -17,11 +17,10 @@ from django.conf import settings
 
 # Create your views here.
 
-def process(vid_name, video_id, disp = False, save_vid = False, debug = False):
+def process(url, video_id, disp = False, save_vid = False, debug = False):
   shot_det = ShotDetector()
   ret = False
-  path = download_file_to_server(vid_name)
-  print("vvvvvvvvvvvvvv", path)
+  path = download_file_to_server(url, str(video_id))
   if os.path.isdir(path):
     print(f"[INFO]: Processing videos in {path}(same directory as executable)")
     video_files = []
@@ -31,37 +30,39 @@ def process(vid_name, video_id, disp = False, save_vid = False, debug = False):
         video_files.append(vid_path)
     for vid_path in tqdm(video_files, desc=f" || Processing {vid_path} ||"):
       print(f"Processing {os.path.basename(vid_path)}")
-      shot_det.process_vid(vid_path, disp, save_vid=True)
+      result_path = shot_det.process_vid(vid_path, disp, save_vid=True)
       shot_det.reset()
     ret = True
   elif os.path.isfile(path):
     vid_path = path
-    shot_det.process_vid(vid_path, disp, save_vid, debug)
+    result_path = shot_det.process_vid(vid_path, disp, save_vid, debug)
     ret = True
   else:
     print("[ERROR] Given path is neither Video Nor Directory!")
     ret = False
 
   if ret:
-    video = VideoItem.objects.get(pk = video_id)    
+    video = VideoItem.objects.get(pk = video_id)
+
     serializer = VideoItemSerializer(instance = video)
     data = serializer.data
     data['status'] = VideoItem.VideoStatus.PROCESSED
+    data['path'] = result_path
     serializer.update(video, data)
 
-def download_file_to_server(vid_id):
+def download_file_to_server(url, video_id):
+    dest_folder = os.path.join(settings.MEDIA_ROOT, video_id)
+    if not os.path.exists(dest_folder):
+      os.makedirs(dest_folder)
 
-    # fill these variables with real values   vid_id = 10tQGaAD_9c2am4_Yo6qVjf4YMBj5s6Fn
-    url = f"https://api.1upstats.com/public/uploads/{vid_id}"
+    filename = url.split('/')[-1].replace(" ", "_")
+    file_path = os.path.join(dest_folder, filename)
 
-    # Make a request to the URL to get the file content
     response = requests.get(url, stream=True)
     if response.status_code == 200:
-        file_path = os.path.join(settings.MEDIA_ROOT, vid_id)
-        
         # Stream the content and write it to a file in chunks
         with open(file_path, 'wb') as file:
-            for chunk in response.iter_content(chunk_size=1048576):
+            for chunk in response.iter_content(chunk_size=1024*8):
                 file.write(chunk)
         print("file_down_path", file_path)        
         return file_path
@@ -69,20 +70,21 @@ def download_file_to_server(vid_id):
         response.raise_for_status()
 
 @api_view(['GET'])
-def download_video_to_local(request, name):
-  print("downdowndown", name)
-  url = f'https://198.22.162.34:9001/home/oliver/project/django-ai-api/aimvpproject/data/{name}'
+def download_video_to_local(request, pk):
+  current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  video = VideoItem.objects.get(pk=pk)
+  try:
+    video = VideoItem.objects.get(pk=pk)
+    video_path = video.path
 
-  # url1 = f"https://api.1upstats.com/public/uploads/{name}"
-  print("mmmmmmmmmm", settings.MEDIA_ROOT)
-  # /home/oliver/project/django-ai-api/aimvpproject/demo_processed.mp4
+    FilePointer = open(video_path, "rb")
+    response = HttpResponse(FilePointer, content_type='application/force-download')
+    response['Content-Disposition'] = 'attachment; filename=%s' % 'demo.mp4'
+
+    return response
   
-  with requests.get(url, stream=True) as r:
-        r.raise_for_status()  # Raises an HTTPError if the response status code is 4XX/5XX
-        with open(name, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1048576): 
-                f.write(chunk)
-  return HttpResponse(f"File has been downloaded and saved as: {name}") 
+  except:
+    return Response(status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET', 'POST'])
 def video_list(request):
@@ -125,17 +127,15 @@ def video_details(request, pk):
 def video_process(request):
   serializer = VideoItemSerializer(data=request.data)
   if serializer.is_valid():
-    path = request.data['title']
-    current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
-    default_path = current_directory + r"/data/demo.mp4"
-    vid_path = current_directory + path
-    print("vvvvvvvvvvvvvv", default_path)
+    url = request.data['url']
+
     validated_data = serializer.validated_data
-    validated_data['status'] = VideoItem.VideoStatus.PROCESSING
+    validated_data['status'] = VideoItem.VideoStatus.PROCESSING    
     serializer.save()
+
     video_id = serializer.data['id']
-    t = Thread(target=process, args=(path, video_id), kwargs={'save_vid': True})
+
+    t = Thread(target=process, args=(url, video_id), kwargs={'save_vid': True})
     t.start()
     return Response(serializer.data)
   return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

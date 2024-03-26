@@ -46,7 +46,10 @@ def process(vid_name, video_id, disp = False, save_vid = False, debug = False):
     video = VideoItem.objects.get(pk = video_id)    
     serializer = VideoItemSerializer(instance = video)
     data = serializer.data
+    root, ext = os.path.splitext(data.title)
+    output_path = root + '_processed.mp4'
     data['status'] = VideoItem.VideoStatus.PROCESSED
+    data['path'] = output_path
     serializer.update(video, data)
 
 def download_file_to_server(vid_id):
@@ -72,6 +75,9 @@ def download_file_to_server(vid_id):
 def download_video_to_local(request, name):
   print("downdowndown", name)
   url = f'https://198.22.162.34:9001/home/oliver/project/django-ai-api/aimvpproject/data/{name}'
+  current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  path = current_directory + f"/{name}"
+  print("ccccccccccccccc", path)
   # root, ext = os.path.splitext(name)
   # output_name = root + "_processed.mp4"
   with requests.get(url, stream=True) as r:

@@ -139,7 +139,7 @@ class ShotDetector:
 
       self.clean_motion()
       self.shot_detection()
-      self.display_score()
+      text_result = self.display_score()
       self.frame_count += 1
 
       if disp:
@@ -154,7 +154,8 @@ class ShotDetector:
         out.release()
     self.cap.release()
     cv2.destroyAllWindows()
-    return output_path
+    result_data = {"output_path":output_path, "text_result":text_result}
+    return result_data
 
   def clean_motion(self):
     # Clean and display ball motion
@@ -270,6 +271,7 @@ class ShotDetector:
       alpha = 0.2 * (self.fade_counter / self.fade_frames)
       self.frame = cv2.addWeighted(self.frame, 1 - alpha, np.full_like(self.frame, self.overlay_color), alpha, 0)
       self.fade_counter -= 1
+    return text
 
   def reset(self):
     self.ball_pos = []  # array of tuples ((x_pos, y_pos), frame count, width, height, conf)

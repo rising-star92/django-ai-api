@@ -39,12 +39,16 @@ def process(url, video_id, disp = False, save_vid = False, debug = False):
         video_files.append(vid_path)
     for vid_path in tqdm(video_files, desc=f" || Processing {vid_path} ||"):
       print(f"Processing {os.path.basename(vid_path)}")
-      result_path = shot_det.process_vid(vid_path, disp, save_vid=True)
+      result = shot_det.process_vid(vid_path, disp, save_vid=True)
+      result_path = result["output_path"]
+      text_result = result["text_result"]
       shot_det.reset()
     ret = True
   elif os.path.isfile(path):
     vid_path = path
-    result_path = shot_det.process_vid(vid_path, disp, save_vid, debug)
+    result = shot_det.process_vid(vid_path, disp, save_vid, debug)
+    result_path = result["output_path"]
+    text_result = result["text_result"]
     ret = True
   else:
     print("[ERROR] Given path is neither Video Nor Directory!")
@@ -53,6 +57,7 @@ def process(url, video_id, disp = False, save_vid = False, debug = False):
   if ret:
     data['status'] = VideoItem.VideoStatus.PROCESSED
     data['path'] = result_path
+    data['result_makes_attemps'] = text_result
     serializer.update(video, data)
 
 def download_file_to_server(url, video_id):

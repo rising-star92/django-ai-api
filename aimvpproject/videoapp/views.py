@@ -8,9 +8,7 @@ import os
 from tqdm import tqdm
 from django.core.files.storage import FileSystemStorage
 from threading import Thread
-import time
 import requests
-import mimetypes
 from django.http import HttpResponse
 from django.http import StreamingHttpResponse
 from django.conf import settings
@@ -20,7 +18,18 @@ from django.conf import settings
 def process(url, video_id, disp = False, save_vid = False, debug = False):
   shot_det = ShotDetector()
   ret = False
+  
+  video = VideoItem.objects.get(pk = video_id)
+  serializer = VideoItemSerializer(instance = video)
+  data = serializer.data
+  data['status'] = VideoItem.VideoStatus.UPLOADING
+  serializer.update(video, data)
+  
   path = download_file_to_server(url, str(video_id))
+
+  data['status'] = VideoItem.VideoStatus.PROCESSING
+  serializer.update(video, data)
+  
   if os.path.isdir(path):
     print(f"[INFO]: Processing videos in {path}(same directory as executable)")
     video_files = []
@@ -42,10 +51,6 @@ def process(url, video_id, disp = False, save_vid = False, debug = False):
     ret = False
 
   if ret:
-    video = VideoItem.objects.get(pk = video_id)
-
-    serializer = VideoItemSerializer(instance = video)
-    data = serializer.data
     data['status'] = VideoItem.VideoStatus.PROCESSED
     data['path'] = result_path
     serializer.update(video, data)
@@ -60,7 +65,6 @@ def download_file_to_server(url, video_id):
 
     response = requests.get(url, stream=True)
     if response.status_code == 200:
-        # Stream the content and write it to a file in chunks
         with open(file_path, 'wb') as file:
             for chunk in response.iter_content(chunk_size=1024*8):
                 file.write(chunk)
@@ -71,15 +75,17 @@ def download_file_to_server(url, video_id):
 
 @api_view(['GET'])
 def download_video_to_local(request, pk):
-  current_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
   video = VideoItem.objects.get(pk=pk)
   try:
     video = VideoItem.objects.get(pk=pk)
     video_path = video.path
+    file_name = video_path.split('/')[-1]
+
+    print(file_name)
 
     FilePointer = open(video_path, "rb")
     response = HttpResponse(FilePointer, content_type='application/force-download')
-    response['Content-Disposition'] = 'attachment; filename=%s' % 'demo.mp4'
+    response['Content-Disposition'] = 'attachment; filename=%s' % file_name
 
     return response
   

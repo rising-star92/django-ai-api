@@ -5,6 +5,7 @@ class VideoItem(models.Model):
   class VideoStatus(models.TextChoices):
     PROCESSING = 'processing'
     PROCESSED = 'processed'
+    UPLOADING = 'uploading'
 
   title = models.CharField(max_length=200)
   url = models.TextField()
